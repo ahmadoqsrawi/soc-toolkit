@@ -1,0 +1,5 @@
+CEF:0|Cisco|ASA|9.1|106023|Deny tcp src outside:45.33.32.156/41200 dst inside:10.0.0.1/22|7|src=45.33.32.156 dst=10.0.0.1 spt=41200 dpt=22 proto=TCP act=denied
+CEF:0|Fortinet|FortiGate|6.4|32001|SSH login failed|8|src=45.33.32.156 suser=root dst=10.0.0.5 dpt=22 act=blocked msg=SSH authentication failed
+CEF:0|Fortinet|FortiGate|6.4|32002|SSH login success|3|src=10.0.0.5 suser=deploy dst=192.168.1.10 dpt=22 act=allowed msg=SSH authentication success
+CEF:0|Microsoft|Windows|10|4625|An account failed to log on|8|src=185.220.101.42 suser=Administrator duser=Administrator act=failure msg=Logon failure
+LEEF:1.0|IBM|QRadar|7.3|AuthFail|sev=8	src=185.220.101.42	usrName=root	dst=10.0.0.1	devTime=Apr 09 2024 09:05:11

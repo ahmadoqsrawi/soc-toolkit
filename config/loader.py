@@ -22,9 +22,9 @@ except ImportError:
 class Config:
     # Detection thresholds
     brute_force_threshold:  int  = 5
-    brute_force_window_sec: int  = 1800   # 30 minutes
+    brute_force_window_sec: int  = 1800
 
-    spray_threshold:        int  = 10     # distinct usernames from one IP
+    spray_threshold:        int  = 10
     spray_window_sec:       int  = 300
 
     # Allowlist
@@ -32,10 +32,14 @@ class Config:
     allowed_users:  list[str] = field(default_factory=list)
 
     # Output
-    max_events_per_finding: int = 100     # cap evidence list size
+    max_events_per_finding: int = 100
 
     # Performance
-    stream_buffer_size: int = 10_000      # max events in correlation window
+    stream_buffer_size: int = 10_000
+
+    # GeoIP database paths (optional)
+    geoip_city_db: Optional[str] = None
+    geoip_asn_db:  Optional[str] = None
 
 
 def load_config(path: Optional[Path] = None) -> Config:
@@ -44,8 +48,7 @@ def load_config(path: Optional[Path] = None) -> Config:
         return Config()
 
     if not _YAML_AVAILABLE:
-        print("[WARNING] PyYAML not installed. Using default config. "
-              "Install with: pip install pyyaml")
+        print("[WARNING] PyYAML not installed. Using default config.")
         return Config()
 
     if not path.exists():

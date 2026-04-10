@@ -9,16 +9,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .base   import BaseParser
-from .syslog import SyslogParser
-from .json_  import JsonParser
-from .csv_   import CsvParser
+from .base         import BaseParser
+from .syslog       import SyslogParser
+from .json_        import JsonParser
+from .csv_         import CsvParser
+from .windows_evtx import WindowsEvtxParser
+from .cef          import CefParser
 
 
 _REGISTRY: list[BaseParser] = [
     JsonParser(),
     CsvParser(),
-    SyslogParser(),    # syslog last — its can_parse is broad
+    WindowsEvtxParser(),
+    CefParser(),
+    SyslogParser(),    # syslog last - its can_parse is broad
 ]
 
 
@@ -27,5 +31,4 @@ def get_parser(path: Path) -> BaseParser:
     for parser in _REGISTRY:
         if parser.can_parse(path):
             return parser
-    # syslog is a reasonable last-resort fallback for unknown text files
     return SyslogParser()
