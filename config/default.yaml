@@ -1,0 +1,24 @@
+# SOC Toolkit — default configuration
+# Copy this file and pass it with --config to override defaults.
+
+# Detection thresholds
+brute_force_threshold:  5      # alert when N+ failures from one IP
+brute_force_window_sec: 1800   # within this many seconds (30 min)
+
+spray_threshold:        10     # distinct usernames from one IP
+spray_window_sec:       300    # within this many seconds (5 min)
+
+# Allowlist — these IPs and users are never flagged
+allowed_ips:
+  # - 10.0.0.1      # internal monitoring
+  # - 192.168.1.100 # bastion host
+
+allowed_users:
+  # - nagios
+  # - prometheus
+
+# Output
+max_events_per_finding: 100   # cap evidence list per finding
+
+# Performance
+stream_buffer_size: 10000     # max findings in correlation window
