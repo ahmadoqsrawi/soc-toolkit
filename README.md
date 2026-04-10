@@ -1,6 +1,6 @@
 # SOC Toolkit
 
-A modular, SOC-grade log analysis and threat detection toolkit built in Python 3.12+. Parses Linux auth logs, JSON, and CSV formats. Detects brute force attacks, password spray, account enumeration, and privilege escalation. Correlates findings into attack chains and generates analyst-ready reports.
+A modular, SOC-grade log analysis and threat detection toolkit built in Python 3.10+. Parses Linux auth logs, JSON, and CSV formats. Detects brute force attacks, password spray, account enumeration, and privilege escalation. Correlates findings into attack chains and generates analyst-ready reports.
 
 Built for daily SOC work, triage, detection, incident response, and evidence collection.
 
