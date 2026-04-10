@@ -1,0 +1,5 @@
+{"timestamp":"2024-04-09T08:03:44Z","host":"webserver","service":"sshd","level":"error","message":"Failed password for root from 45.33.32.156","user":"root","ip":"45.33.32.156"}
+{"timestamp":"2024-04-09T08:04:10Z","host":"webserver","service":"sshd","level":"info","message":"Accepted password for deploy from 45.33.32.156","user":"deploy","ip":"45.33.32.156"}
+{"timestamp":"2024-04-09T08:05:00Z","host":"webserver","service":"sudo","level":"warning","message":"deploy ran /bin/bash as root","user":"deploy"}
+{"timestamp":"2024-04-09T09:00:00Z","host":"webserver","service":"kernel","level":"critical","message":"Out of memory: Kill process 9876 (postgres) score 892"}
+{"timestamp":"2024-04-09T09:05:11Z","host":"webserver","service":"sshd","level":"error","message":"Failed password for root from 185.220.101.42","user":"root","ip":"185.220.101.42"}
