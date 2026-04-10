@@ -1,8 +1,10 @@
 # SOC Toolkit
 
-A modular, SOC-grade log analysis and threat detection toolkit built in Python 3.10+. Parses Linux auth logs, JSON, and CSV formats. Detects brute force attacks, password spray, account enumeration, and privilege escalation. Correlates findings into attack chains and generates analyst-ready reports.
+A modular, SOC-grade log analysis and threat detection toolkit built in Python 3.10+. Parses Linux auth logs, Windows Event Logs, CEF/LEEF, JSON, and CSV formats. Detects brute force attacks, password spray, account enumeration, and privilege escalation. Correlates findings into attack chains and generates analyst-ready reports.
 
 Built for daily SOC work, triage, detection, incident response, and evidence collection.
+
+![CI](https://github.com/ahmadoqsrawi/soc-toolkit/actions/workflows/ci.yml/badge.svg)
 
 ---
 
@@ -26,29 +28,33 @@ Built for daily SOC work, triage, detection, incident response, and evidence col
 
 ## Features
 
-- Multi-format log parsing - syslog/auth.log, JSON, JSON-lines, CSV, TSV
+- Multi-format log parsing - syslog/auth.log, Windows Event Log XML, CEF, LEEF, JSON, JSON-lines, CSV, TSV
 - Compressed file support - .gz, .bz2, .xz handled transparently
-- Five detectors - brute force, password spray, enumeration, privilege escalation, allowlist suppression
+- Six detectors - brute force, password spray, enumeration, privilege escalation, auth success, allowlist suppression
 - Correlation engine - links findings into attack chains with a sliding time window
 - Five built-in correlation rules - brute-then-success, success-then-privesc, full attack chain, enum-then-brute, persistent recon
 - Four report formats - terminal text, Markdown, HTML (self-contained), JSON
 - Evidence bundle - ZIP with all report formats plus raw evidence log plus manifest
 - Streaming design - processes files of any size without loading into memory
-- Fully tested - 70 tests across parsers, detectors, correlators, and exporters
-- CI enforced - GitHub Actions runs the full test suite on every push
+- Fully tested - 119 tests across parsers, detectors, correlators, exporters, and enrichers
+- GeoIP enrichment - optional country and ASN context using MaxMind GeoLite2, no API required
+- CI enforced - GitHub Actions runs the full test suite on Ubuntu, macOS, and Windows
 
 ---
 
 ## Architecture
 
 ```
-Log File
+Log File (syslog, Windows XML, CEF/LEEF, JSON, CSV)
     |
     v
-parsers/          <- SyslogParser, JsonParser, CsvParser
+parsers/          <- SyslogParser, WindowsEvtxParser, CefParser, JsonParser, CsvParser
     |  Iterator[Event]
     v
-detectors/        <- BruteForce, PasswordSpray, Enumeration, PrivEsc
+enrichers/        <- GeoIPEnricher (optional, adds country and ASN to metadata)
+    |  Iterator[Event]
+    v
+detectors/        <- BruteForce, PasswordSpray, Enumeration, PrivEsc, AuthSuccess
     |  Iterator[Finding]
     v
 correlators/      <- CorrelationEngine + 5 built-in rules
@@ -133,7 +139,7 @@ Run the detector against the included sample log:
 soc-detect --input samples/auth.log.sample
 ```
 
-Expected output: 5 findings including a CRITICAL privilege escalation, two HIGH brute force attacks, a HIGH backdoor account creation, and a MEDIUM password spray.
+Expected output: 7 findings including 3 CRITICAL correlated attack chains, privilege escalation, brute force from two IPs, a backdoor account creation, and a MEDIUM password spray.
 
 Generate a full evidence bundle:
 
@@ -144,7 +150,7 @@ from soc_toolkit.parsers.router     import get_parser
 from soc_toolkit.config.loader      import Config
 from soc_toolkit.detectors          import (BruteForceDetector, PasswordSprayDetector,
                                             EnumerationDetector, PrivEscDetector,
-                                            DetectionPipeline)
+                                            AuthSuccessDetector, DetectionPipeline)
 from soc_toolkit.correlators.engine import CorrelationEngine
 from soc_toolkit.correlators.rules  import ALL_RULES
 from soc_toolkit.exporters.bundle   import create_bundle
@@ -155,7 +161,8 @@ events   = list(get_parser(sample).parse(sample))
 
 pipeline = DetectionPipeline(config)
 for det in [BruteForceDetector(config), PasswordSprayDetector(config),
-            EnumerationDetector(config), PrivEscDetector(config)]:
+            EnumerationDetector(config), PrivEscDetector(config),
+            AuthSuccessDetector(config)]:
     pipeline.add_detector(det)
 
 findings   = list(pipeline.run(iter(events)))
@@ -270,6 +277,10 @@ Fires on privilege escalation patterns. Produces separate findings for each sub-
 - User creation - new accounts via useradd -> HIGH
 - Group changes - groupadd, usermod -> HIGH
 
+### auth_success
+
+Fires on every successful login. INFO severity on its own. Required for correlation rules to fire on real logs - without it, brute_then_success and full_attack_chain never trigger.
+
 ---
 
 ## Correlation Rules
@@ -358,7 +369,7 @@ venv\Scripts\activate         # Windows
 python -m pytest tests/ -v
 ```
 
-Expected: 70 tests, 0 failures.
+Expected: 119 tests, 0 failures.
 
 Test coverage by layer:
 
@@ -367,14 +378,18 @@ Test coverage by layer:
 | Models | 5 | tests/test_models.py |
 | Syslog parser | 9 | tests/parsers/test_syslog.py |
 | JSON parser | 4 | tests/parsers/test_json.py |
-| Brute force | 8 | tests/detectors/test_brute_force.py |
-| Password spray | 5 | tests/detectors/test_password_spray.py |
+| Windows EVTX parser | 9 | tests/parsers/test_windows_evtx.py |
+| CEF/LEEF parser | 7 | tests/parsers/test_cef.py |
+| Brute force | 11 | tests/detectors/test_brute_force.py |
+| Password spray | 6 | tests/detectors/test_password_spray.py |
 | Enumeration | 5 | tests/detectors/test_enumeration.py |
-| Privilege escalation | 8 | tests/detectors/test_priv_esc.py |
-| Allowlist + pipeline | 4 | tests/detectors/test_allowlist.py |
+| Privilege escalation | 9 | tests/detectors/test_priv_esc.py |
+| Auth success | 9 | tests/detectors/test_auth_success.py |
+| Allowlist + pipeline | 5 | tests/detectors/test_allowlist.py |
 | Correlation engine | 6 | tests/correlators/test_engine.py |
-| Correlation rules | 6 | tests/correlators/test_rules.py |
-| Exporters + timeline | 10 | tests/test_exporters.py |
+| Correlation rules | 11 | tests/correlators/test_rules.py |
+| Exporters + timeline | 17 | tests/test_exporters.py |
+| GeoIP enricher | 5 | tests/test_geoip.py |
 
 ---
 
@@ -386,18 +401,24 @@ soc_toolkit/
 |   |- event.py           Event dataclass - normalized log event schema
 |   |- finding.py         Finding dataclass - structured detection result
 |- parsers/
-|   |- base.py            BaseParser - streaming Iterator[Event] contract
-|   |- syslog.py          Linux auth.log / syslog parser
-|   |- json_.py           JSON and JSON-lines parser
-|   |- csv_.py            CSV and TSV parser
-|   |- router.py          Auto-selects parser by file extension
+|   |- base.py               BaseParser - streaming Iterator[Event] contract
+|   |- syslog.py             Linux auth.log / syslog parser
+|   |- windows_evtx.py       Windows Security Event Log XML parser
+|   |- cef.py                CEF and LEEF format parser
+|   |- json_.py              JSON and JSON-lines parser
+|   |- csv_.py               CSV and TSV parser
+|   |- router.py             Auto-selects parser by file extension
+|- enrichers/
+|   |- base.py               BaseEnricher contract
+|   |- geoip.py              GeoIPEnricher - MaxMind GeoLite2 offline lookup
 |- detectors/
-|   |- base.py            BaseDetector - Iterator[Event] to Iterator[Finding]
-|   |- brute_force.py     BruteForceDetector
-|   |- password_spray.py  PasswordSprayDetector
-|   |- enumeration.py     EnumerationDetector
-|   |- priv_esc.py        PrivEscDetector
-|   |- allowlist.py       AllowlistEngine + DetectionPipeline
+|   |- base.py               BaseDetector - Iterator[Event] to Iterator[Finding]
+|   |- brute_force.py        BruteForceDetector
+|   |- password_spray.py     PasswordSprayDetector
+|   |- enumeration.py        EnumerationDetector
+|   |- priv_esc.py           PrivEscDetector
+|   |- auth_success.py       AuthSuccessDetector
+|   |- allowlist.py          AllowlistEngine + DetectionPipeline
 |- correlators/
 |   |- base.py            BaseCorrelator + CorrelationRule dataclass
 |   |- engine.py          CorrelationEngine - sliding window evaluator
@@ -417,11 +438,14 @@ soc_toolkit/
 |   |- loader.py          Config dataclass + YAML loader
 |   |- default.yaml       Default configuration
 |- samples/
-|   |- auth.log.sample    Synthetic SSH brute force + sudo abuse scenario
-|   |- events.json.sample Mixed severity JSON-lines sample
+|   |- auth.log.sample       Synthetic SSH brute force + sudo abuse scenario
+|   |- events.json.sample    Mixed severity JSON-lines sample
+|   |- security.xml.sample   Synthetic Windows Security Event Log XML
+|   |- events.cef.sample     Synthetic CEF and LEEF log sample
 |- tests/
     |- test_models.py
     |- test_exporters.py
+    |- test_geoip.py
     |- parsers/
     |- detectors/
     |- correlators/
@@ -436,7 +460,7 @@ soc_toolkit/
 | Phase 1 - Core architecture | Complete | Event/Finding models, parsers, base contracts, CLI, config, tests |
 | Phase 2 - Detection engine | Complete | 5 detectors, allowlist engine, detection pipeline |
 | Phase 3 - Correlation + reporting | Complete | Correlation engine, 5 rules, 4 report formats, evidence bundle |
-| Phase 4 - Source expansion | Planned | Windows Event Log, CEF/LEEF, GeoIP enrichment, compressed input |
+| Phase 4 - Source expansion | Complete | AuthSuccessDetector, Windows EVTX, CEF/LEEF, GeoIP enricher, 119 tests |
 | Phase 5 - Analyst experience | Planned | Live tail mode, web UI, saved investigations |
 | Phase 6 - Ecosystem integration | Planned | REST API, Docker, SIEM integration, MITRE ATT&CK mapping |
 
